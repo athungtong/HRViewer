@@ -3,7 +3,7 @@ HRViewer is a matlab software tool designed for in deep viewing and comparing HR
 
 HRViewer is used together with HRVmass, the software design to compute HRV from EKG or R-time signal in batch processing.
 
-HRVmass generate the HRV indices file that is appropriate to be used as the input file for HRVviewer. In other word, we compute HRV using mass and
+HRVmass generate the HRV indices file that is appropriate to be used as the input file for HRVviewer. In other word, we compute HRV using HRVmass and
 view the HRV indices using HRViewer. 
 
 The important feature of HRViewer is that you can compare HRV measured from different patient in several effective ways.
@@ -12,6 +12,6 @@ For example, you can easily view HRV indices over the EKG recording of multiple 
 
 You can compare HRV indices measured from different EKG signals or either different group. 
 
-By selecting a segment, you can view HRV, histogram, powerspectrum, poincare, and EKG signals in the same time and can switch view from one EKG signal to others easiler. 
+By selecting a segment, you can view HRV, histogram, powerspectrum, poincare, and EKG signals in the same time and can switch view from one EKG signal to others easily. 
 
 
