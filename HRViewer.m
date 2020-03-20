@@ -186,9 +186,9 @@ handles.set.save.outfolderopt = 'Save in same folder as ECG file';
 handles.set.save.outPath = cd;
 handles.set.save.showlog=0;
 
-handles.set.hrv.mnn=1;
-handles.set.hrv.sdnn=1;
-handles.set.hrv.cv=1;
+handles.set.hrv.stat=1;
+handles.set.hrv.geo=1;
+
 handles.set.hrv.poincare=1;
 handles.set.hrv.lomb=1;
 
@@ -583,6 +583,7 @@ cla(handles.axesRR);
 cla(handles.axesRRz);
 cla(handles.axesPC);
 cla(handles.axesLomb);
+cla(handles.axesDFA);
 
 set(handles.pvaluetxt,'string','');
 set(handles.selGrouptxt,'string','');
@@ -619,6 +620,7 @@ else
     axes(handles.axesRRz); axis off;
     axes(handles.axesLomb); axis off;
     axes(handles.axesPC); axis off;
+    axes(handles.axesDFA); axis off;
     set(handles.SettingMenu,'visible','off');
     
 end
@@ -1249,7 +1251,8 @@ if isempty(fname)
     clearaxes(handles.axesRRz);
     clearaxes(handles.axesPC);
     clearaxes(handles.axesLomb);
-  
+    clearaxes(handles.axesDFA);
+    
 else % has some files
     set(handles.ListFile,'String',fname);
     set(handles.ListFile,'enable','on');    
@@ -1453,6 +1456,7 @@ else
     axes(handles.axesRRz); axis off;
     axes(handles.axesLomb); axis off;
     axes(handles.axesPC); axis off;
+    axes(handles.axesDFA); axis off;
     
     set(handles.SettingMenu,'visible','off');
 end
@@ -1474,8 +1478,7 @@ indr=ci>4/length(rr_interval); % index of outliers
 temp=rr_interval;
 temp(indr)=[];
 
-
-[f edges]=gethistogram(temp);
+[f edges]=gethistogram(temp,1/128);
 % if strcmp(handles.RRoption,'HR')
 %     edges=60./edges;
 % end
@@ -1490,27 +1493,63 @@ set(handles.axesRRz,'Color',[0.94,0.94,0.94]);
 ylimit=get(handles.axesRRz,'ylim');
 xlimit=get(handles.axesRRz,'xlim');
 
-if handles.Results{selfile}.set.hrv.mnn
-    num= strcmp(handles.Results{selfile}.hrv.Labels,'MNN');
-    MNN = handles.Results{selfile}.hrv.Value(handles.epochnum,num);
-    txt1=['MNN=' num2str(MNN,2)];
-    text(xlimit(1)+(xlimit(2)-xlimit(1))*2/3,ylimit(2)*7/8,txt1,'fontsize',8,'color','b');
+%compute TINN here
+[Y X]=max(f); 
+%Left triangle                 
+d1=zeros(X-1,1);
+for x=1:X-1                 
+    q=[zeros(x-1,1); Y/(X-x)*((x:X)'-x)];
+    d1(x)=sum((f(1:X)-q).^2);              
+end
+[~, iA]=min(d1);
+A = edges(iA);
+
+xl=edges(edges>=A & edges<=edges(X));
+yl=Y*(xl-A)/(edges(X)-A);
+hold on;
+plot(xl,yl,'-','color','r');
+
+
+%Right triangle                     
+d2=zeros(length(edges)-X,1);
+for x=X+1:length(edges)                   
+    q=[Y/(x-X)*(x-(X:x-1)'); zeros(length(edges)-x+1,1)];
+    d2(x-X)=sum((f(X:end)-q).^2); 
 end
 
-if handles.Results{selfile}.set.hrv.sdnn
-    num= strcmp(handles.Results{selfile}.hrv.Labels,'SDNN');
-    SDNN = handles.Results{selfile}.hrv.Value(handles.epochnum,num);
-    txt1=['SDNN=' num2str(SDNN,2)];
+[~, iB]=min(d2); 
+B=edges(iB+X-1);      
+
+xr=edges(edges>=edges(X) & edges<=B);
+yr=Y*(B-xr)/(B-edges(X));
+plot(xr,yr,'-','color','r');
+hold off;
+
+
+
+if handles.Results{selfile}.set.hrv.geo
+    num= strcmp(handles.Results{selfile}.hrv.Labels,'TRI');
+    TRI = handles.Results{selfile}.hrv.Value(handles.epochnum,num);
+    txt1=['TRI=' num2str(TRI,2)];
+    text(xlimit(1)+(xlimit(2)-xlimit(1))*2/3,ylimit(2)*7/8,txt1,'fontsize',8,'color','b');
+
+    num= strcmp(handles.Results{selfile}.hrv.Labels,'TINN');
+    TINN = handles.Results{selfile}.hrv.Value(handles.epochnum,num);
+    txt1=['TINN=' num2str(TINN,2)];
     text(xlimit(1)+(xlimit(2)-xlimit(1))*2/3,ylimit(2)*6/8,txt1,'fontsize',8,'color','b');
 end
 
-if handles.Results{selfile}.set.hrv.cv
-    num= strcmp(handles.Results{selfile}.hrv.Labels,'CV');
-    CV = handles.Results{selfile}.hrv.Value(handles.epochnum,num);
-    txt1=['CV=' num2str(CV,2)];
-    text(xlimit(1)+(xlimit(2)-xlimit(1))*2/3,ylimit(2)*5/8,txt1,'fontsize',8,'color','b');
-end
-
+% if handles.Results{selfile}.set.hrv.geo
+%     num= strcmp(handles.Results{selfile}.hrv.Labels,'MNN');
+%     MNN = handles.Results{selfile}.hrv.Value(handles.epochnum,num);
+%     txt1=['MNN=' num2str(MNN,2)];
+%     text(xlimit(1)+(xlimit(2)-xlimit(1))*2/3,ylimit(2)*7/8,txt1,'fontsize',8,'color','b');
+% 
+%     num= strcmp(handles.Results{selfile}.hrv.Labels,'SDNN');
+%     SDNN = handles.Results{selfile}.hrv.Value(handles.epochnum,num);
+%     txt1=['SDNN=' num2str(SDNN,2)];
+%     text(xlimit(1)+(xlimit(2)-xlimit(1))*2/3,ylimit(2)*6/8,txt1,'fontsize',8,'color','b');
+% end
 
 
 % Plot Poincare
@@ -1599,8 +1638,42 @@ else
     cla(handles.axesLomb);
 end
 
-% set(handles.axesLomb,'Color',[0.95 1 0.95]);
+%Plot DFA
+axes(handles.axesDFA);
+n=4:16;   N1=length(n);
+F_n=zeros(N1,1);
+ for i=1:N1
+     F_n(i)=DFA(rr_interval,n(i),1);
+ end
+n=n';
+plot(log10(n),log10(F_n),'.'); hold on;
+A=polyfit(log10(n(1:end)),log10(F_n(1:end)),1);
+Alpha1=A(1);
+y=polyval(A,log10(n));
+plot(log10(n),y,'r');
+txtA1=['\alpha_1=' num2str(Alpha1,2)];
+text(log10(n(round(length(n)/3))),y(round(length(n)/2))+0.1,txtA1,'fontsize',8,'color','r','HorizontalAlignment','center');
+% Again for alpha2
+n=16:64;   N1=length(n);
+F_n=zeros(N1,1);
+ for i=1:N1
+     F_n(i)=DFA(rr_interval,n(i),1);
+ end
+n=n';
+plot(log10(n),log10(F_n),'.'); hold on;
+xlabel('log(n)','fontweight','bold'); ylabel('log(F(n))','fontweight','bold')
+A=polyfit(log10(n(1:end)),log10(F_n(1:end)),1);
+Alpha2=A(1);
+y=polyval(A,log10(n));
+plot(log10(n),y,'color',[0 0.39 0]);  
+txtA2=['\alpha_2=' num2str(Alpha2,2)];
+text(log10(n(round(length(n)/3))),y(round(length(n)/2))+0.1,txtA2,'fontsize',8,'color',[0 0.39 0],'HorizontalAlignment','center');
 
+hold off;
+set(handles.axesDFA,'Color',[0.94,0.94,0.94]);
+
+
+%--------------------------------------
 
 % save rr_interval for TPVA and maybe for ECG_view
 handles.RR_interval=rr_interval;
